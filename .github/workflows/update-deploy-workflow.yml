@@ -7,7 +7,7 @@ on:
     branches: ['*']
 
 permissions:
-  contents: write  # Allows read/write to repository files, but not workflow updates (we'll use PAT)
+  contents: write  # Allows read/write access to repository contents, but not direct workflow updates with GITHUB_TOKEN
 
 jobs:
   update-deploy-workflow:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up jq (for JSON parsing)
+      - name: Install dependencies (jq for JSON parsing)
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Fetch branches and update workflow YAML
@@ -47,13 +47,28 @@ jobs:
             echo "          - $branch" >> $workflow_path
           done
 
-      - name: Commit and push updated workflow
+      - name: Commit and push updated workflow to a new branch
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}  # Ensure this secret is correctly defined
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "github-actions@github.com"
+          git checkout -b update-deploy-workflow
           git add .github/workflows/deploy-workflow.yml
           git commit -m "Update deploy workflow with dynamic branch options"
-          git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+          git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git update-deploy-workflow
 
+      - name: Create pull request
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          # Create a pull request using GitHub API
+          curl -X POST -H "Authorization: token $PAT_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/pulls \
+            -d '{
+              "title": "Update deploy workflow with dynamic branch options",
+              "head": "update-deploy-workflow",
+              "base": "main",
+              "body": "This pull request updates the deploy workflow with the latest branch options."
+            }'

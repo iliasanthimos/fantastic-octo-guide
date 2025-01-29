@@ -1,24 +1,52 @@
-name: Deploy Branch with Manual Input
+name: Manual Branch Merge to Develop
 
 on:
   workflow_dispatch:
     inputs:
-      branch_name:
-        description: 'Enter the branch name (see available options in logs)'
+      branch_to_merge:
+        description: 'Enter the branch name to merge into develop (see logs for available branches)'
         required: true
         type: string
 
+permissions:
+  contents: write  # Needed to push merged changes to the repository
+
 jobs:
-  fetch-branches:
+  merge:
     runs-on: ubuntu-latest
+
     steps:
-      - name: List all available branches
+      # Step 1: List available branches in the logs
+      - name: List branches for reference
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Fetching available branches..."
+          echo "Fetching branches..."
           curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/branches \
-            | jq -r '.[].name'
+            https://api.github.com/repos/${{ github.repository }}/branches | jq -r '.[].name'
 
-          echo "Please enter one of the above branches when triggering the workflow."
+      # Step 2: Checkout the develop branch
+      - name: Checkout develop branch
+        uses: actions/checkout@v3
+        with:
+          ref: develop
+
+      # Step 3: Configure Git
+      - name: Configure Git for merge
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "github-actions@github.com"
+
+      # Step 4: Fetch and merge the branch
+      - name: Fetch and merge branch
+        run: |
+          echo "Fetching branch to merge: ${{ github.event.inputs.branch_to_merge }}"
+          git fetch origin ${{ github.event.inputs.branch_to_merge }}
+
+          echo "Merging branch into develop..."
+          git merge origin/${{ github.event.inputs.branch_to_merge }} --no-ff || exit 1
+
+      # Step 5: Push the merged changes back to develop
+      - name: Push changes to develop
+        run: |
+          git push origin develop

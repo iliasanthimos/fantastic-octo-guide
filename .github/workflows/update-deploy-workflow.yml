@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write  # Allows pushing workflow updates
+  workflows: write
 
 jobs:
   update-deploy-workflow:

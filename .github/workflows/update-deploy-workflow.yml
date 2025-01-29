@@ -1,0 +1,58 @@
+name: Update Deploy Workflow on Branch Events
+
+on:
+  create:          # Triggers when a branch or tag is created
+    branches: ['*']
+  delete:          # Triggers when a branch or tag is deleted
+    branches: ['*']
+
+permissions:
+  contents: write  # Allows pushing workflow updates
+
+jobs:
+  update-deploy-workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up jq (for JSON parsing)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch branches and update workflow YAML
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch all branches from the GitHub API
+          branches=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/branches | jq -r '.[].name')
+
+          # Define the workflow file path
+          workflow_path=".github/workflows/deploy-workflow.yml"
+
+          # Generate the updated workflow YAML file
+          cat <<EOF > $workflow_path
+name: Deploy with Dynamic Branch Options
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: 'Select a branch to deploy'
+        required: true
+        type: choice
+        options:
+EOF
+
+          # Add each branch to the options list
+          for branch in $branches; do
+            echo "          - $branch" >> $workflow_path
+          done
+
+      - name: Commit and push updated workflow
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/deploy-workflow.yml
+          git commit -m "Update deploy workflow with dynamic branch options"
+          git push

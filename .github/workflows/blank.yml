@@ -1,0 +1,48 @@
+name: Merge Branch Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: 'Enter the branch name to merge into develop'
+        required: true
+        type: string
+
+permissions:
+  contents: write  # Required to perform merge operations
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
+        with:
+          ref: develop  # Checkout the develop branch to prepare for merging
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Fetch branch to merge
+        run: |
+          # Fetch the latest branch data
+          git fetch origin ${{ github.event.inputs.branch_name }}
+
+      - name: Merge the branch
+        run: |
+          # Attempt to merge the branch into develop
+          git merge origin/${{ github.event.inputs.branch_name }} --no-ff || echo "Merge conflict detected"
+
+      - name: Push the changes to develop
+        if: success()  # Only push if the merge was successful
+        run: |
+          git push origin develop
+
+      - name: Handle merge conflicts (if any)
+        if: failure()
+        run: |
+          echo "Merge conflict detected. Please resolve conflicts manually."
+          exit 1

@@ -49,10 +49,11 @@ jobs:
 
       - name: Commit and push updated workflow
         env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}  # Use the PAT secret to push workflow updates
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}  # Ensure this secret is correctly defined
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "github-actions@github.com"
           git add .github/workflows/deploy-workflow.yml
           git commit -m "Update deploy workflow with dynamic branch options"
           git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+

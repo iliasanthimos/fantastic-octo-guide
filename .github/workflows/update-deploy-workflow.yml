@@ -1,14 +1,13 @@
 name: Update Deploy Workflow on Branch Events
 
 on:
-  create:          # Triggers when a branch or tag is created
+  create:
     branches: ['*']
-  delete:          # Triggers when a branch or tag is deleted
+  delete:
     branches: ['*']
 
 permissions:
-  contents: write  # Allows pushing workflow updates
-  workflows: write
+  contents: write  # Correct permission to allow updating workflow files
 
 jobs:
   update-deploy-workflow:

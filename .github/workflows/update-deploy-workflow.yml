@@ -7,7 +7,7 @@ on:
     branches: ['*']
 
 permissions:
-  contents: write  # Correct permission to allow updating workflow files
+  contents: write  # Allows read/write to repository files, but not workflow updates (we'll use PAT)
 
 jobs:
   update-deploy-workflow:
@@ -48,9 +48,11 @@ jobs:
           done
 
       - name: Commit and push updated workflow
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}  # Use the PAT secret to push workflow updates
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Action"
+          git config --global user.email "github-actions@github.com"
           git add .github/workflows/deploy-workflow.yml
           git commit -m "Update deploy workflow with dynamic branch options"
-          git push
+          git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
